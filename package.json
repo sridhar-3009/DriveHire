@@ -1,0 +1,10 @@
+{
+  "name": "drivehire",
+  "version": "1.0.0",
+  "engines": { "node": ">=18.0.0" },
+  "scripts": {
+    "build": "cd drivehire && npm install && npm run build",
+    "start": "cd server && node index.js",
+    "install-deps": "cd server && npm install && cd ../drivehire && npm install"
+  }
+}

@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
@@ -25,6 +27,13 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/seed',         require('./routes/seed'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
+
+// Serve Vite build in production (combined deployment)
+const distPath = path.join(__dirname, '..', 'drivehire', 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+}
 
 // Connect DB then start
 mongoose.connect(process.env.MONGODB_URI || process.env.MONGODB_URL)
