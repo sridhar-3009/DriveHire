@@ -38,6 +38,7 @@ app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/jobs',          require('./routes/jobs'));
 app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/kyc',           require('./routes/kyc'));
 app.use('/api/seed',          require('./routes/seed'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));

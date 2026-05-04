@@ -40,6 +40,10 @@ export const api = {
   jobApplicants: (jobId)       => req(`/applications/job/${jobId}`),
   updateApp:     (id, status)  => req(`/applications/${id}`, { method: 'PATCH', body: { status } }),
 
+  // KYC
+  kycStatus: ()     => req('/kyc/status'),
+  kycSubmit: (body) => req('/kyc/submit', { method: 'POST', body }),
+
   // Notifications
   getNotifications: ()   => req('/notifications'),
   markAllRead:      ()   => req('/notifications/read-all', { method: 'PATCH' }),

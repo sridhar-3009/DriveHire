@@ -141,6 +141,7 @@ export default function Navbar() {
           { to: '/jobs',         label: 'Find Jobs' },
           { to: '/applications', label: 'Applications' },
           { to: '/wishlist',     label: 'Saved' },
+          { to: '/kyc',          label: 'KYC' },
           { to: '/profile',      label: 'Profile' },
         ]
       : [

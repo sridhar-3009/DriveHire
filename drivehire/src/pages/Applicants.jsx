@@ -126,7 +126,14 @@ export default function Applicants() {
                         <User size={20} style={{ color: '#64748b' }} />
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>{driver.name || 'Driver'}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                          <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{driver.name || 'Driver'}</p>
+                          {driver.profile?.kycStatus === 'verified' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: '#15803d', flexShrink: 0 }}>
+                              ✅ Verified
+                            </span>
+                          )}
+                        </div>
                         <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '3px' }}>{driver.email || ''}</p>
                         <div style={{ display: 'flex', gap: '8px', fontSize: '12px', color: '#94a3b8', flexWrap: 'wrap' }}>
                           {driver.phone && <span>📞 {driver.phone}</span>}

@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     location:      { type: String, default: '' },
     languages:     { type: [String], default: [] },
     availability:  { type: String, default: 'immediate' },
+    kycStatus:     { type: String, enum: ['not_submitted', 'pending', 'verified', 'rejected'], default: 'not_submitted' },
   },
   // Employer-specific
   company: {

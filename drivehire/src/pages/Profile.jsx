@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { User, AlertCircle, Loader2, Building2 } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import { User, AlertCircle, Loader2, Building2, ShieldCheck } from 'lucide-react';
 import useStore from '../store/useStore';
 import { useToast } from '../components/Toast';
+
+const KYC_CFG = {
+  not_submitted: { label: 'Not Verified', bg: '#f8fafc', border: '#e2e8f0', color: '#64748b', icon: '🔒' },
+  pending:       { label: 'KYC Under Review', bg: '#fffbeb', border: '#fde68a', color: '#d97706', icon: '⏳' },
+  verified:      { label: 'KYC Verified',     bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d', icon: '✅' },
+  rejected:      { label: 'KYC Rejected — Resubmit', bg: '#fef2f2', border: '#fecaca', color: '#dc2626', icon: '❌' },
+};
 
 const inputStyle = {
   width: '100%', padding: '11px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px',
@@ -111,19 +118,46 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Profile completion (drivers) */}
-        {user.role === 'driver' && (
-          <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px 20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Profile Completion</p>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#0284c7' }}>{completion}%</span>
-            </div>
-            <div style={{ width: '100%', height: '7px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${completion}%`, background: 'linear-gradient(to right, #38bdf8, #0284c7)', borderRadius: '999px', transition: 'width 0.3s' }} />
-            </div>
-            {completion < 100 && <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '7px' }}>Complete your profile to get better job matches</p>}
-          </div>
-        )}
+        {/* Profile completion + KYC (drivers) */}
+        {user.role === 'driver' && (() => {
+          const kycStatus = user.profile?.kycStatus || 'not_submitted';
+          const kyc = KYC_CFG[kycStatus] || KYC_CFG.not_submitted;
+          return (
+            <>
+              <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px 20px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Profile Completion</p>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#0284c7' }}>{completion}%</span>
+                </div>
+                <div style={{ width: '100%', height: '7px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${completion}%`, background: 'linear-gradient(to right, #38bdf8, #0284c7)', borderRadius: '999px', transition: 'width 0.3s' }} />
+                </div>
+                {completion < 100 && <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '7px' }}>Complete your profile to get better job matches</p>}
+              </div>
+
+              <Link to="/kyc" style={{ textDecoration: 'none', display: 'block', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: kyc.bg, border: `1.5px solid ${kyc.border}`, borderRadius: '14px', padding: '14px 18px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <ShieldCheck size={18} style={{ color: kyc.color, flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: 700, color: kyc.color }}>{kyc.icon} {kyc.label}</p>
+                      {kycStatus === 'not_submitted' && <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '1px' }}>Complete KYC to get a Verified badge</p>}
+                      {kycStatus === 'verified' && <p style={{ fontSize: '12px', color: '#15803d', marginTop: '1px' }}>Your identity is verified</p>}
+                    </div>
+                  </div>
+                  {kycStatus !== 'verified' && (
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: kyc.color, whiteSpace: 'nowrap' }}>
+                      {kycStatus === 'not_submitted' ? 'Start KYC →' : kycStatus === 'rejected' ? 'Resubmit →' : 'View Status →'}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </>
+          );
+        })()}
 
         {error && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px' }}>
