@@ -4,13 +4,15 @@ const getToken = () => localStorage.getItem('drivehire_token');
 
 async function req(path, opts = {}) {
   const token = getToken();
+  const { headers: extraHeaders = {}, ...restOpts } = opts;
   const res = await fetch(`${BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extraHeaders,
     },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    ...restOpts,
+    body: restOpts.body ? JSON.stringify(restOpts.body) : undefined,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Request failed');
@@ -35,17 +37,27 @@ export const api = {
   updateJobStatus: (id, status) => req(`/jobs/${id}/status`, { method: 'PATCH', body: { status } }),
 
   // Applications
-  apply:         (jobId)       => req('/applications', { method: 'POST', body: { jobId } }),
-  myApps:        ()            => req('/applications/mine'),
-  jobApplicants: (jobId)       => req(`/applications/job/${jobId}`),
-  updateApp:     (id, status)  => req(`/applications/${id}`, { method: 'PATCH', body: { status } }),
+  apply:         (jobId, coverLetter = '') => req('/applications', { method: 'POST', body: { jobId, coverLetter } }),
+  myApps:        ()                        => req('/applications/mine'),
+  jobApplicants: (jobId)                   => req(`/applications/job/${jobId}`),
+  updateApp:     (id, status, extra = {})  => req(`/applications/${id}`, { method: 'PATCH', body: { status, ...extra } }),
 
   // KYC
   kycStatus: ()     => req('/kyc/status'),
   kycSubmit: (body) => req('/kyc/submit', { method: 'POST', body }),
 
+  // Admin KYC (x-admin-secret header)
+  kycPending: (secret)                      => req('/kyc/pending',             { headers: { 'x-admin-secret': secret } }),
+  kycReview:  (userId, status, reason, secret) => req(`/kyc/${userId}/review`, {
+    method: 'PATCH', body: { status, rejectionReason: reason },
+    headers: { 'x-admin-secret': secret },
+  }),
+
   // Notifications
   getNotifications: ()   => req('/notifications'),
   markAllRead:      ()   => req('/notifications/read-all', { method: 'PATCH' }),
   markOneRead:      (id) => req(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  // Stats (public)
+  getStats: () => req('/stats'),
 };

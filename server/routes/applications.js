@@ -10,11 +10,11 @@ router.post('/', authMiddleware, async (req, res) => {
     if (req.user.role !== 'driver') {
       return res.status(403).json({ message: 'Drivers only' });
     }
-    const { jobId } = req.body;
+    const { jobId, coverLetter = '' } = req.body;
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ message: 'Job not found' });
 
-    const app = await Application.create({ jobId, userId: req.user._id });
+    const app = await Application.create({ jobId, userId: req.user._id, coverLetter: coverLetter.slice(0, 1000) });
 
     // Notify employer of new application
     await Notification.create({
@@ -69,11 +69,17 @@ router.patch('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Not your job' });
     }
     app.status = req.body.status;
+    if (req.body.interviewDate !== undefined) {
+      app.interviewDate = req.body.interviewDate || null;
+    }
     await app.save();
 
     // Notify driver of status change
+    const interviewNote = app.interviewDate
+      ? ` Interview scheduled: ${new Date(app.interviewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.`
+      : '';
     const statusMessages = {
-      Shortlisted: `You've been shortlisted for "${app.jobId.title}"! 🎉`,
+      Shortlisted: `You've been shortlisted for "${app.jobId.title}"!${interviewNote} 🎉`,
       Selected:    `Congratulations! You're selected for "${app.jobId.title}" 🚌`,
       Rejected:    `Your application for "${app.jobId.title}" was not selected.`,
     };

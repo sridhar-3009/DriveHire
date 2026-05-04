@@ -34,7 +34,7 @@ export default function PostJob() {
   const [form, setForm] = useState({
     title: '', location: '', salaryMin: '', salaryMax: '',
     route: 'City', experience: '1+ year', accommodation: false, food: false,
-    description: '', urgent: false,
+    description: '', urgent: false, openings: 1, deadline: '',
   });
 
   if (!user || user.role !== 'employer') return <Navigate to="/login" />;
@@ -63,6 +63,8 @@ export default function PostJob() {
         description: form.description || `Looking for an experienced bus driver for ${form.route.toLowerCase()} routes in ${form.location}.`,
         urgent: form.urgent,
         vehicleType: 'bus',
+        openings: Number(form.openings) || 1,
+        deadline: form.deadline || null,
       });
       setSubmitted(true);
       setTimeout(() => navigate('/manage-jobs'), 2200);
@@ -153,6 +155,14 @@ export default function PostJob() {
                 <option>3+ years</option>
                 <option>5+ years</option>
               </select>
+            </Field>
+
+            <Field label="No. of Openings" half>
+              <input type="number" min="1" max="100" value={form.openings} onChange={e => setField('openings', e.target.value)} placeholder="1" style={inputStyle} />
+            </Field>
+
+            <Field label="Application Deadline" half>
+              <input type="date" value={form.deadline} min={new Date().toISOString().split('T')[0]} onChange={e => setField('deadline', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }} />
             </Field>
 
             <Field label="Benefits Provided">

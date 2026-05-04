@@ -40,6 +40,7 @@ app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/kyc',           require('./routes/kyc'));
 app.use('/api/seed',          require('./routes/seed'));
+app.use('/api/stats',         require('./routes/stats'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

@@ -15,6 +15,7 @@ import Applicants from './pages/Applicants';
 import Profile from './pages/Profile';
 import About from './pages/About';
 import KYC from './pages/KYC';
+import Admin from './pages/Admin';
 import useStore from './store/useStore';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/about" element={<About />} />
             <Route path="/kyc" element={<KYC />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={
               <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px' }}>
                 <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, IndianRupee, Briefcase, Clock, Home, CheckCircle, Bookmark, BookmarkCheck, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, IndianRupee, Briefcase, Clock, Home, CheckCircle, Bookmark, BookmarkCheck, Send, Loader2, X, Calendar } from 'lucide-react';
 import { api } from '../services/api';
 import { FALLBACK_JOBS, normalizeJob } from '../data/jobs';
 import useStore from '../store/useStore';
@@ -32,6 +32,8 @@ export default function JobDetail() {
   const [job, setJob] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
 
   useEffect(() => {
     setPageLoading(true);
@@ -66,14 +68,20 @@ export default function JobDetail() {
     return String(appJobId) === String(job.id);
   });
 
-  const handleApply = async () => {
+  const handleApplyOpen = () => {
     if (!user) { navigate('/login'); return; }
+    setCoverLetter('');
+    setShowApplyModal(true);
+  };
+
+  const handleApplySubmit = async () => {
     setApplying(true);
     try {
-      await applyToJob(job.id);
+      await applyToJob(job.id, coverLetter);
       toast('Application submitted!', 'success');
-    } catch {
-      toast('Failed to apply. Try again.', 'error');
+      setShowApplyModal(false);
+    } catch (err) {
+      toast(err.message || 'Failed to apply. Try again.', 'error');
     } finally {
       setApplying(false);
     }
@@ -114,9 +122,9 @@ export default function JobDetail() {
                   <CheckCircle size={15} /> Applied
                 </div>
               ) : (
-                <button onClick={handleApply} disabled={applying}
-                  style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '10px 20px', background: applying ? '#7dd3fc' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: applying ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(14,165,233,0.3)' }}>
-                  <Send size={14} /> {applying ? 'Applying...' : 'Apply Now'}
+                <button onClick={handleApplyOpen}
+                  style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '10px 20px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(14,165,233,0.3)' }}>
+                  <Send size={14} /> Apply Now
                 </button>
               )}
             </div>
@@ -136,9 +144,16 @@ export default function JobDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #f1f5f9' }}>
             <MetaItem icon={IndianRupee} label="Salary" value={job.salary} />
             <MetaItem icon={Briefcase}   label="Experience" value={job.experience} />
-            <MetaItem icon={Clock}       label="Route" value={job.route} />
+            <MetaItem icon={Clock}       label="Route" value={`${job.route} Route`} />
             <MetaItem icon={Home}        label="Accommodation" value={job.accommodation ? 'Provided' : 'Not included'} />
+            {job.openings > 1 && <MetaItem icon={Briefcase} label="Openings" value={`${job.openings} positions`} />}
+            {job.deadline && <MetaItem icon={Calendar} label="Apply By" value={new Date(job.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />}
           </div>
+          {job.deadline && new Date(job.deadline) < new Date(Date.now() + 7 * 86400000) && new Date(job.deadline) > new Date() && (
+            <div style={{ marginTop: '12px', padding: '8px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', fontSize: '13px', color: '#dc2626', fontWeight: 600 }}>
+              ⏰ Closing soon — {Math.ceil((new Date(job.deadline) - new Date()) / 86400000)} days left to apply
+            </div>
+          )}
         </Card>
 
         {/* Description */}
@@ -187,6 +202,46 @@ export default function JobDetail() {
               )}
             </div>
           </Card>
+        )}
+
+        {/* Apply Modal */}
+        {showApplyModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+            onClick={e => { if (e.target === e.currentTarget) setShowApplyModal(false); }}>
+            <div style={{ background: '#fff', borderRadius: '24px', padding: '28px', width: '100%', maxWidth: '480px', boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Apply for this Job</h2>
+                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{job.title} · {job.company}</p>
+                </div>
+                <button onClick={() => setShowApplyModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#94a3b8', display: 'flex' }}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                  Cover Letter <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span>
+                </label>
+                <textarea
+                  value={coverLetter}
+                  onChange={e => setCoverLetter(e.target.value.slice(0, 1000))}
+                  placeholder="Tell the employer why you're a great fit. Mention your experience, licenses, and availability..."
+                  rows={5}
+                  style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '14px', color: '#111827', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6 }}
+                />
+                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', textAlign: 'right' }}>{coverLetter.length}/1000</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setShowApplyModal(false)} style={{ flex: 1, padding: '12px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '14px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={handleApplySubmit} disabled={applying} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: applying ? '#7dd3fc' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: applying ? 'not-allowed' : 'pointer' }}>
+                  {applying ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Submitting...</> : <><Send size={14} /> Submit Application</>}
+                </button>
+              </div>
+            </div>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
         )}
 
         {!user && (

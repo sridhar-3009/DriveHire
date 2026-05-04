@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, User, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { api } from '../services/api';
 import useStore from '../store/useStore';
 import { useToast } from '../components/Toast';
@@ -27,6 +27,9 @@ export default function Applicants() {
   const [jobTitle, setJobTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [expanded, setExpanded] = useState({});
+  const [profileModal, setProfileModal] = useState(null);
+  const [interviewDates, setInterviewDates] = useState({});
 
   const toast = useToast(s => s.show);
 
@@ -47,8 +50,10 @@ export default function Applicants() {
   const handleUpdateStatus = async (appId, newStatus) => {
     setUpdating(appId);
     try {
-      const updated = await api.updateApp(appId, newStatus);
-      setApps(prev => prev.map(a => a._id === appId ? { ...a, status: updated.status } : a));
+      const extra = newStatus === 'Shortlisted' && interviewDates[appId]
+        ? { interviewDate: interviewDates[appId] } : {};
+      const updated = await api.updateApp(appId, newStatus, extra);
+      setApps(prev => prev.map(a => a._id === appId ? { ...a, status: updated.status, interviewDate: updated.interviewDate } : a));
       toast(`Applicant ${newStatus.toLowerCase()}`, 'success');
     } catch {
       toast('Failed to update status', 'error');
@@ -122,12 +127,12 @@ export default function Applicants() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                     {/* Driver info */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '180px' }}>
-                      <div style={{ width: '44px', height: '44px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <User size={20} style={{ color: '#64748b' }} />
-                      </div>
+                      <button onClick={() => setProfileModal(driver)} style={{ width: '44px', height: '44px', background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
+                        <User size={20} style={{ color: '#0284c7' }} />
+                      </button>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                          <p style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{driver.name || 'Driver'}</p>
+                          <button onClick={() => setProfileModal(driver)} style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>{driver.name || 'Driver'}</button>
                           {driver.profile?.kycStatus === 'verified' && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: '#15803d', flexShrink: 0 }}>
                               ✅ Verified
@@ -139,7 +144,6 @@ export default function Applicants() {
                           {driver.phone && <span>📞 {driver.phone}</span>}
                           {driver.profile?.experience > 0 && <span>🕒 {driver.profile.experience} yr exp.</span>}
                           {driver.profile?.location && <span>📍 {driver.profile.location}</span>}
-                          {driver.profile?.licenseNumber && <span>🪪 {driver.profile.licenseNumber}</span>}
                         </div>
                       </div>
                     </div>
@@ -153,12 +157,44 @@ export default function Applicants() {
                       <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                         {new Date(app.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                       </p>
+                      {app.interviewDate && (
+                        <p style={{ fontSize: '11px', color: '#0284c7', marginTop: '3px', fontWeight: 600 }}>
+                          📅 {new Date(app.interviewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
                     </div>
                   </div>
 
+                  {/* Cover letter */}
+                  {app.coverLetter && (
+                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                      <button onClick={() => setExpanded(e => ({ ...e, [app._id]: !e[app._id] }))} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#0284c7', padding: 0 }}>
+                        {expanded[app._id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {expanded[app._id] ? 'Hide' : 'Show'} Cover Letter
+                      </button>
+                      {expanded[app._id] && (
+                        <div style={{ marginTop: '10px', padding: '12px 14px', background: '#f8fafc', borderRadius: '10px', fontSize: '13px', color: '#334155', lineHeight: 1.7, borderLeft: '3px solid #0ea5e9' }}>
+                          {app.coverLetter}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Interview date input (shows when about to Shortlist) */}
+                  {nextStatuses.includes('Shortlisted') && (
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                        <Calendar size={13} /> Interview Date <span style={{ fontWeight: 400 }}>(optional, sent to driver)</span>
+                      </label>
+                      <input type="date" value={interviewDates[app._id] || ''} min={new Date().toISOString().split('T')[0]}
+                        onChange={e => setInterviewDates(d => ({ ...d, [app._id]: e.target.value }))}
+                        style={{ padding: '7px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', outline: 'none', cursor: 'pointer' }} />
+                    </div>
+                  )}
+
                   {/* Action buttons */}
                   {nextStatuses.length > 0 && (
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
                       {nextStatuses.map(status => {
                         const isPositive = status === 'Selected' || status === 'Shortlisted';
                         const isReopen = status === 'Applied';
@@ -193,6 +229,51 @@ export default function Applicants() {
           </div>
         )}
       </div>
+
+      {/* Driver Profile Modal */}
+      {profileModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={e => { if (e.target === e.currentTarget) setProfileModal(null); }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '28px', width: '100%', maxWidth: '420px', boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Driver Profile</h2>
+              <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8', lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ width: '56px', height: '56px', background: '#f0f9ff', border: '2px solid #bae6fd', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <User size={24} style={{ color: '#0284c7' }} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <p style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>{profileModal.name}</p>
+                  {profileModal.profile?.kycStatus === 'verified' && <span style={{ padding: '2px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '999px', fontSize: '11px', fontWeight: 700, color: '#15803d' }}>✅ KYC Verified</span>}
+                </div>
+                <p style={{ fontSize: '13px', color: '#64748b' }}>{profileModal.email}</p>
+                {profileModal.phone && <p style={{ fontSize: '13px', color: '#64748b' }}>📞 {profileModal.phone}</p>}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {profileModal.profile?.licenseNumber && <Row label="License No." value={profileModal.profile.licenseNumber} />}
+              {profileModal.profile?.experience > 0 && <Row label="Experience" value={`${profileModal.profile.experience} years`} />}
+              {profileModal.profile?.location && <Row label="Location" value={profileModal.profile.location} />}
+              {profileModal.profile?.availability && <Row label="Availability" value={{ immediate: 'Immediate', '2weeks': 'In 2 weeks', '1month': 'In 1 month' }[profileModal.profile.availability] || profileModal.profile.availability} />}
+              {profileModal.profile?.languages?.length > 0 && <Row label="Languages" value={profileModal.profile.languages.join(', ')} />}
+            </div>
+            <button onClick={() => { window.location.href = `mailto:${profileModal.email}`; }} style={{ width: '100%', marginTop: '20px', padding: '12px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+              📧 Contact via Email
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px' }}>
+      <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{value}</span>
     </div>
   );
 }

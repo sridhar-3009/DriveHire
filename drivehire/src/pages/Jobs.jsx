@@ -38,6 +38,7 @@ export default function Jobs() {
   const [routeType, setRouteType] = useState('All');
   const [salaryIdx, setSalaryIdx] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
 
   useEffect(() => {
     setApiLoading(true);
@@ -47,16 +48,23 @@ export default function Jobs() {
       .finally(() => setApiLoading(false));
   }, []);
 
-  const filtered = useMemo(() => jobs.filter(job => {
-    const matchSearch = !search ||
-      job.title.toLowerCase().includes(search.toLowerCase()) ||
-      job.company.toLowerCase().includes(search.toLowerCase());
-    const matchLoc = location === 'All' || job.location.includes(location);
-    const matchRoute = routeType === 'All' || job.route === routeType;
-    const salMin = parseSalaryMin(job.salary);
-    const range = SALARY_RANGES[salaryIdx];
-    return matchSearch && matchLoc && matchRoute && salMin >= range.min && salMin <= range.max;
-  }), [jobs, search, location, routeType, salaryIdx]);
+  const filtered = useMemo(() => {
+    const base = jobs.filter(job => {
+      const matchSearch = !search ||
+        job.title.toLowerCase().includes(search.toLowerCase()) ||
+        job.company.toLowerCase().includes(search.toLowerCase()) ||
+        job.location?.toLowerCase().includes(search.toLowerCase());
+      const matchLoc = location === 'All' || job.location.includes(location);
+      const matchRoute = routeType === 'All' || job.route === routeType;
+      const salMin = parseSalaryMin(job.salary);
+      const range = SALARY_RANGES[salaryIdx];
+      return matchSearch && matchLoc && matchRoute && salMin >= range.min && salMin <= range.max;
+    });
+    if (sortBy === 'salary_high') return [...base].sort((a, b) => parseSalaryMin(b.salary) - parseSalaryMin(a.salary));
+    if (sortBy === 'salary_low') return [...base].sort((a, b) => parseSalaryMin(a.salary) - parseSalaryMin(b.salary));
+    if (sortBy === 'urgent') return [...base].sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
+    return [...base].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [jobs, search, location, routeType, salaryIdx, sortBy]);
 
   const activeFilterCount = [location !== 'All', routeType !== 'All', salaryIdx !== 0].filter(Boolean).length;
   const clearAll = () => { setLocation('All'); setRouteType('All'); setSalaryIdx(0); setSearch(''); };
@@ -171,9 +179,16 @@ export default function Jobs() {
           </div>
         ) : (
           <>
-            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px', fontWeight: 500 }}>
-              {filtered.length} job{filtered.length !== 1 ? 's' : ''} found
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+              <p style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>{filtered.length} job{filtered.length !== 1 ? 's' : ''} found</p>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                style={{ padding: '7px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', fontWeight: 500, color: '#475569', background: '#fff', cursor: 'pointer', outline: 'none' }}>
+                <option value="newest">Newest first</option>
+                <option value="salary_high">Salary: High → Low</option>
+                <option value="salary_low">Salary: Low → High</option>
+                <option value="urgent">Urgent first</option>
+              </select>
+            </div>
             <div className="grid-3">
               {filtered.map(job => <JobCard key={job.id} job={job} />)}
             </div>

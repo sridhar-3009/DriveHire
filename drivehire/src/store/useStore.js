@@ -79,13 +79,9 @@ const useStore = create((set, get) => ({
   },
 
   // ── Applications (API) ──
-  applyToJob: async (jobId) => {
-    try {
-      await api.apply(jobId);
-      await get().fetchApplications();
-    } catch {
-      await get().fetchApplications();
-    }
+  applyToJob: async (jobId, coverLetter = '') => {
+    await api.apply(jobId, coverLetter);
+    await get().fetchApplications();
   },
 
   fetchApplications: async () => {

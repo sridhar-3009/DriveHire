@@ -2,10 +2,11 @@ const router = require('express').Router();
 const User = require('../models/User');
 const Job = require('../models/Job');
 
-// POST /api/seed — dev only, seeds sample bus driver jobs
 router.post('/', async (req, res) => {
+  if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
   try {
-    // Create a sample employer
     let employer = await User.findOne({ email: 'employer@demo.com' });
     if (!employer) {
       employer = await User.create({
@@ -17,63 +18,75 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Wipe existing seed jobs
     await Job.deleteMany({ employerId: employer._id });
+
+    const deadline30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const deadline14 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     const jobs = await Job.insertMany([
       {
-        employerId: employer._id,
-        title: 'City Bus Driver',
-        company: 'BEST Transport Co.',
+        employerId: employer._id, title: 'City Bus Driver', company: 'BEST Transport Co.',
         description: 'Drive AC city bus on fixed routes in Mumbai. Shift-based work. PF & ESI provided.',
         vehicleType: 'bus', salary: '₹20,000 – ₹28,000/mo', location: 'Mumbai, Maharashtra',
         route: 'City', experience: '2+ years', accommodation: false, food: false, urgent: false,
+        openings: 5, deadline: deadline30,
         requirements: ['HMV License', '2+ yrs experience', 'Mumbai route knowledge'],
       },
       {
-        employerId: employer._id,
-        title: 'School Bus Driver',
-        company: 'Sunrise Academy',
+        employerId: employer._id, title: 'School Bus Driver', company: 'Sunrise Academy',
         description: 'Responsible driving for school children. Morning and afternoon shifts only.',
         vehicleType: 'bus', salary: '₹18,000 – ₹24,000/mo', location: 'Chennai, Tamil Nadu',
-        route: 'City', experience: '3+ years', accommodation: false, food: true, urgent: false,
+        route: 'School', experience: '3+ years', accommodation: false, food: true, urgent: false,
+        openings: 2, deadline: deadline30,
         requirements: ['HMV License', '3+ yrs experience', 'Police verification required'],
       },
       {
-        employerId: employer._id,
-        title: 'Interstate Bus Driver',
-        company: 'Karnataka SRTC',
+        employerId: employer._id, title: 'Interstate Bus Driver', company: 'Karnataka SRTC',
         description: 'Drive overnight sleeper buses on Bangalore–Hyderabad route. Excellent pay.',
         vehicleType: 'bus', salary: '₹30,000 – ₹42,000/mo', location: 'Bangalore, Karnataka',
         route: 'Interstate', experience: '5+ years', accommodation: true, food: true, urgent: true,
+        openings: 3, deadline: deadline14,
         requirements: ['HMV/Transport License', '5+ yrs exp', 'Night driving experience'],
       },
       {
-        employerId: employer._id,
-        title: 'Electric Bus Driver',
-        company: 'GreenMove Solutions',
+        employerId: employer._id, title: 'Electric Bus Driver', company: 'GreenMove Solutions',
         description: 'Drive new electric city buses. Training provided for EV handling.',
         vehicleType: 'bus', salary: '₹22,000 – ₹30,000/mo', location: 'Hyderabad, Telangana',
         route: 'City', experience: '2+ years', accommodation: false, food: false, urgent: true,
+        openings: 4, deadline: deadline14,
         requirements: ['HMV License', 'EV training (provided)', 'Clean record'],
       },
       {
-        employerId: employer._id,
-        title: 'Tourist Bus Driver',
-        company: 'SkyTours Pvt Ltd',
+        employerId: employer._id, title: 'Tourist Bus Driver', company: 'SkyTours Pvt Ltd',
         description: 'Drive luxury tourist buses across hill stations and heritage routes.',
         vehicleType: 'bus', salary: '₹25,000 – ₹35,000/mo', location: 'Delhi, NCR',
         route: 'Interstate', experience: '3+ years', accommodation: true, food: false, urgent: false,
+        openings: 2, deadline: deadline30,
         requirements: ['HMV License', 'Tourist permit', 'English communication skills'],
       },
       {
-        employerId: employer._id,
-        title: 'Corporate Shuttle Driver',
-        company: 'TechPark Mobility',
+        employerId: employer._id, title: 'Corporate Shuttle Driver', company: 'TechPark Mobility',
         description: 'Drive AC mini-bus for IT company employee pickup/drop. Fixed shifts, weekends off.',
         vehicleType: 'bus', salary: '₹16,000 – ₹22,000/mo', location: 'Pune, Maharashtra',
-        route: 'City', experience: '1+ year', accommodation: false, food: false, urgent: false,
+        route: 'Corporate', experience: '1+ year', accommodation: false, food: false, urgent: false,
+        openings: 3, deadline: deadline30,
         requirements: ['LMV/HMV License', '1+ yr experience', 'Punctuality required'],
+      },
+      {
+        employerId: employer._id, title: 'Local Route Bus Driver', company: 'City Connect Transport',
+        description: 'Drive local bus connecting suburbs to city center. Good base salary + incentives.',
+        vehicleType: 'bus', salary: '₹15,000 – ₹20,000/mo', location: 'Pune, Maharashtra',
+        route: 'Local', experience: '1+ year', accommodation: false, food: false, urgent: false,
+        openings: 6, deadline: deadline30,
+        requirements: ['HMV License', 'Clean driving record'],
+      },
+      {
+        employerId: employer._id, title: 'Volvo Bus Driver', company: 'Raj Travels',
+        description: 'Drive premium Volvo buses on Mumbai–Goa and Mumbai–Pune routes.',
+        vehicleType: 'bus', salary: '₹35,000 – ₹50,000/mo', location: 'Mumbai, Maharashtra',
+        route: 'Interstate', experience: '5+ years', accommodation: true, food: true, urgent: false,
+        openings: 2, deadline: deadline30,
+        requirements: ['HMV License', '5+ yrs exp', 'Volvo/Scania experience preferred'],
       },
     ]);
 

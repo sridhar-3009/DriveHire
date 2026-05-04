@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, ArrowRight } from 'lucide-react';
 import { FALLBACK_JOBS } from '../data/jobs';
 import JobCard from '../components/JobCard';
+import { api } from '../services/api';
 
-const STATS = [
+const FALLBACK_STATS = [
   { value: '3,800+', label: 'Bus Drivers' },
   { value: '1,200+', label: 'Jobs Posted' },
   { value: '280+',   label: 'Fleet Owners' },
@@ -24,6 +26,23 @@ const HOW_IT_WORKS = [
 ];
 
 export default function Home() {
+  const [stats, setStats] = useState(null);
+  const [liveJobs, setLiveJobs] = useState([]);
+
+  useEffect(() => {
+    api.getStats().then(setStats).catch(() => {});
+    api.getJobs().then(jobs => setLiveJobs(jobs.slice(0, 3))).catch(() => {});
+  }, []);
+
+  const displayStats = stats ? [
+    { value: stats.drivers > 0 ? `${stats.drivers.toLocaleString()}+` : '3,800+', label: 'Bus Drivers' },
+    { value: stats.jobs > 0 ? `${stats.jobs.toLocaleString()}+` : '1,200+', label: 'Active Jobs' },
+    { value: stats.employers > 0 ? `${stats.employers.toLocaleString()}+` : '280+', label: 'Fleet Owners' },
+    { value: stats.verifiedDrivers > 0 ? `${stats.verifiedDrivers.toLocaleString()}+` : '4.8★', label: stats.verifiedDrivers > 0 ? 'Verified Drivers' : 'Rating' },
+  ] : FALLBACK_STATS;
+
+  const featuredJobs = liveJobs.length > 0 ? liveJobs : FALLBACK_JOBS;
+
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
 
@@ -66,7 +85,7 @@ export default function Home() {
       <section style={{ background: '#f8fafc', paddingBottom: '48px' }}>
         <div className="page-container">
           <div className="grid-4">
-            {STATS.map((s, i) => (
+            {displayStats.map((s, i) => (
               <div key={i} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '22px 16px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <p style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 800, color: '#0284c7', letterSpacing: '-0.5px' }}>{s.value}</p>
                 <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: 500 }}>{s.label}</p>
@@ -115,7 +134,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="grid-3">
-            {FALLBACK_JOBS.slice(0, 3).map(job => <JobCard key={job.id} job={job} />)}
+            {featuredJobs.map((job, i) => <JobCard key={job._id || job.id || i} job={{ ...job, id: job._id || job.id }} />)}
           </div>
         </div>
       </section>
