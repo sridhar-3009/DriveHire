@@ -60,4 +60,18 @@ export const api = {
 
   // Stats (public)
   getStats: () => req('/stats'),
+
+  // Users
+  getEmployerProfile: (id) => req(`/users/employer/${id}`),
+  searchDrivers: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return req(`/users/drivers${qs ? `?${qs}` : ''}`);
+  },
+
+  // Account
+  changePassword: (body) => req('/auth/password',  { method: 'PATCH', body }),
+  deleteAccount:  (password) => req('/auth/account', { method: 'DELETE', body: { password } }),
+
+  // Application withdrawal
+  withdrawApp: (id) => req(`/applications/${id}`, { method: 'DELETE' }),
 };

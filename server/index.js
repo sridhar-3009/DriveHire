@@ -2,8 +2,27 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+// Security headers
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+
+// Prevent NoSQL injection attacks
+app.use(mongoSanitize());
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { message: 'Too many attempts. Try again in 15 minutes.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+app.use('/api/auth/login',    authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Serverless-compatible MongoDB connection (cached across warm invocations)
 let cachedConn = null;
@@ -31,7 +50,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '12mb' })); // allow base64 images
 
 // Routes
 app.use('/api/auth',          require('./routes/auth'));
@@ -41,6 +60,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/kyc',           require('./routes/kyc'));
 app.use('/api/seed',          require('./routes/seed'));
 app.use('/api/stats',         require('./routes/stats'));
+app.use('/api/users',         require('./routes/users'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

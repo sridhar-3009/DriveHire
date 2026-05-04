@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Truck, Eye, EyeOff, User, Building2, AlertCircle } from 'lucide-react';
+
+function pwStrength(pw) {
+  if (!pw) return null;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return { label: 'Weak', color: '#ef4444', pct: 25 };
+  if (score === 2) return { label: 'Fair', color: '#f59e0b', pct: 50 };
+  if (score === 3) return { label: 'Good', color: '#0ea5e9', pct: 75 };
+  return { label: 'Strong', color: '#16a34a', pct: 100 };
+}
 import useStore from '../store/useStore';
 
 const inputStyle = {
@@ -26,6 +39,7 @@ export default function Auth({ mode = 'login' }) {
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [localError, setLocalError] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const isRegister = mode === 'register';
   const errMsg = localError || error;
@@ -37,6 +51,9 @@ export default function Auth({ mode = 'login' }) {
 
     if (!form.email || !form.password) { setLocalError('Fill all required fields.'); return; }
     if (isRegister && !form.name) { setLocalError('Name is required.'); return; }
+    if (isRegister && form.password.length < 8) { setLocalError('Password must be at least 8 characters.'); return; }
+    if (isRegister && !/[0-9]/.test(form.password)) { setLocalError('Password must contain at least one number.'); return; }
+    if (isRegister && !agreedToTerms) { setLocalError('Please agree to the Terms and Privacy Policy.'); return; }
 
     try {
       if (isRegister) {
@@ -141,14 +158,40 @@ export default function Auth({ mode = 'login' }) {
               <div style={{ position: 'relative' }}>
                 <input type={showPass ? 'text' : 'password'} value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
-                  placeholder="Min. 6 characters" style={{ ...inputStyle, paddingRight: '44px' }} />
+                  placeholder="Min. 8 characters + 1 number" style={{ ...inputStyle, paddingRight: '44px' }} />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
                   {showPass ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+              {isRegister && form.password && (() => {
+                const s = pwStrength(form.password);
+                return s ? (
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>Password strength</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: s.color }}>{s.label}</span>
+                    </div>
+                    <div style={{ height: '4px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${s.pct}%`, background: s.color, borderRadius: '999px', transition: 'all 0.3s' }} />
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </Field>
 
+            {isRegister && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '4px' }}>
+                <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)}
+                  style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: '#0ea5e9', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                  I agree to the{' '}
+                  <Link to="/terms" target="_blank" style={{ color: '#0284c7', fontWeight: 600 }}>Terms of Service</Link>
+                  {' '}and{' '}
+                  <Link to="/privacy" target="_blank" style={{ color: '#0284c7', fontWeight: 600 }}>Privacy Policy</Link>
+                </span>
+              </label>
+            )}
             <button
               type="submit" disabled={loading}
               style={{ width: '100%', padding: '13px', background: loading ? '#7dd3fc' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px', boxShadow: '0 4px 12px rgba(14,165,233,0.3)', transition: 'background 0.15s' }}

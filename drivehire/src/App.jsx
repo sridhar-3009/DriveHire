@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Toaster from './components/Toast';
 import Home from './pages/Home';
 import Jobs from './pages/Jobs';
@@ -16,6 +17,11 @@ import Profile from './pages/Profile';
 import About from './pages/About';
 import KYC from './pages/KYC';
 import Admin from './pages/Admin';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Contact from './pages/Contact';
+import FAQ from './pages/FAQ';
+import Drivers from './pages/Drivers';
 import useStore from './store/useStore';
 
 export default function App() {
@@ -47,6 +53,11 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/kyc" element={<KYC />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/drivers" element={<Drivers />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<FAQ />} />
             <Route path="*" element={
               <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px' }}>
                 <div>
@@ -58,6 +69,7 @@ export default function App() {
             } />
           </Routes>
         </main>
+        <Footer />
       </div>
     </BrowserRouter>
   );

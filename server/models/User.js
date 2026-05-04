@@ -5,22 +5,30 @@ const userSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
   email:    { type: String, required: true, unique: true, lowercase: true },
   phone:    { type: String, default: '' },
-  password: { type: String, required: true, minlength: 6 },
+  password: { type: String, required: true, minlength: 8 },
   role:     { type: String, enum: ['driver', 'employer', 'admin'], default: 'driver' },
-  // Driver-specific (bus drivers only)
+  avatar:   { type: String, default: '' }, // base64 compressed
+  isActive: { type: Boolean, default: true },
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil:     { type: Date, default: null },
+  // Driver-specific
   profile: {
     licenseNumber: { type: String, default: '' },
+    licenseExpiry: { type: Date, default: null },
     experience:    { type: Number, default: 0 },
     location:      { type: String, default: '' },
     languages:     { type: [String], default: [] },
     availability:  { type: String, default: 'immediate' },
+    bio:           { type: String, default: '' },
     kycStatus:     { type: String, enum: ['not_submitted', 'pending', 'verified', 'rejected'], default: 'not_submitted' },
   },
   // Employer-specific
   company: {
-    name:      { type: String, default: '' },
-    fleetSize: { type: Number, default: 0 },
-    location:  { type: String, default: '' },
+    name:        { type: String, default: '' },
+    fleetSize:   { type: Number, default: 0 },
+    location:    { type: String, default: '' },
+    website:     { type: String, default: '' },
+    description: { type: String, default: '' },
   },
 }, { timestamps: true });
 

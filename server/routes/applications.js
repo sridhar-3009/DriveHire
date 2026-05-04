@@ -98,4 +98,20 @@ router.patch('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE /api/applications/:id — driver withdraws application (Applied status only)
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'driver') return res.status(403).json({ message: 'Drivers only' });
+    const app = await Application.findOne({ _id: req.params.id, userId: req.user._id }).populate('jobId', 'title');
+    if (!app) return res.status(404).json({ message: 'Application not found' });
+    if (app.status !== 'Applied') {
+      return res.status(400).json({ message: 'Can only withdraw applications in Applied status' });
+    }
+    await app.deleteOne();
+    res.json({ message: 'Application withdrawn successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

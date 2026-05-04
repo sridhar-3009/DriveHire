@@ -148,6 +148,7 @@ export default function Navbar() {
           { to: '/dashboard',   label: 'Dashboard' },
           { to: '/post-job',    label: 'Post Job' },
           { to: '/manage-jobs', label: 'My Jobs' },
+          { to: '/drivers',     label: 'Search Drivers' },
           { to: '/profile',     label: 'Profile' },
         ]
     : [
