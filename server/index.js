@@ -27,7 +27,7 @@ app.use('/api/seed',         require('./routes/seed'));
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 
 // Connect DB then start
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI || process.env.MONGODB_URL)
   .then(() => {
     console.log('MongoDB connected');
     app.listen(process.env.PORT || 5000, () => {
