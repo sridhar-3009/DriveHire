@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/auth');
 
 // POST /api/applications — driver applies
@@ -14,6 +15,15 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!job) return res.status(404).json({ message: 'Job not found' });
 
     const app = await Application.create({ jobId, userId: req.user._id });
+
+    // Notify employer of new application
+    await Notification.create({
+      userId: job.employerId,
+      message: `${req.user.name} applied for "${job.title}"`,
+      type: 'application',
+      link: `/applicants/${job._id}`,
+    });
+
     res.status(201).json(app);
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ message: 'Already applied' });
@@ -53,13 +63,29 @@ router.get('/job/:jobId', authMiddleware, async (req, res) => {
 router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'employer') return res.status(403).json({ message: 'Employers only' });
-    const app = await Application.findById(req.params.id).populate('jobId');
+    const app = await Application.findById(req.params.id).populate('jobId').populate('userId', 'name');
     if (!app) return res.status(404).json({ message: 'Application not found' });
     if (app.jobId.employerId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not your job' });
     }
     app.status = req.body.status;
     await app.save();
+
+    // Notify driver of status change
+    const statusMessages = {
+      Shortlisted: `You've been shortlisted for "${app.jobId.title}"! 🎉`,
+      Selected:    `Congratulations! You're selected for "${app.jobId.title}" 🚌`,
+      Rejected:    `Your application for "${app.jobId.title}" was not selected.`,
+    };
+    if (statusMessages[req.body.status]) {
+      await Notification.create({
+        userId: app.userId._id,
+        message: statusMessages[req.body.status],
+        type: 'status',
+        link: `/applications`,
+      });
+    }
+
     res.json(app);
   } catch (err) {
     res.status(500).json({ message: err.message });

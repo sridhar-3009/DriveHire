@@ -39,4 +39,9 @@ export const api = {
   myApps:        ()            => req('/applications/mine'),
   jobApplicants: (jobId)       => req(`/applications/job/${jobId}`),
   updateApp:     (id, status)  => req(`/applications/${id}`, { method: 'PATCH', body: { status } }),
+
+  // Notifications
+  getNotifications: ()   => req('/notifications'),
+  markAllRead:      ()   => req('/notifications/read-all', { method: 'PATCH' }),
+  markOneRead:      (id) => req(`/notifications/${id}/read`, { method: 'PATCH' }),
 };
