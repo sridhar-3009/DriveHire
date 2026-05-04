@@ -2,10 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 
 const app = express();
+
+// Serverless-compatible MongoDB connection (cached across warm invocations)
+let cachedConn = null;
+async function connectDB() {
+  if (cachedConn && mongoose.connection.readyState === 1) return;
+  cachedConn = await mongoose.connect(
+    process.env.MONGODB_URI || process.env.MONGODB_URL
+  );
+}
+
+// Connect before every request (no-op if already connected)
+app.use(async (req, res, next) => {
+  try { await connectDB(); next(); }
+  catch (err) { res.status(500).json({ message: 'DB connection failed' }); }
+});
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
@@ -28,22 +41,13 @@ app.use('/api/seed',         require('./routes/seed'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 
-// Serve Vite build in production (combined deployment)
-const distPath = path.join(__dirname, '..', 'drivehire', 'dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+// Local dev — start server directly
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5001;
+  connectDB()
+    .then(() => app.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`)))
+    .catch(err => { console.error('DB failed:', err.message); process.exit(1); });
 }
 
-// Connect DB then start
-mongoose.connect(process.env.MONGODB_URI || process.env.MONGODB_URL)
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(`Server running on http://localhost:${process.env.PORT || 5000}`);
-    });
-  })
-  .catch(err => {
-    console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
-  });
+// Vercel serverless export
+module.exports = app;
