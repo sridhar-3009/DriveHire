@@ -11,6 +11,22 @@ const app = express();
 // Security headers
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
+// CORS must be first — before DB middleware — so errors still get CORS headers
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // server-to-server / curl
+    if (allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
+    // also allow any *.vercel.app during development
+    if (origin.endsWith('.vercel.app')) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
 // Prevent NoSQL injection attacks
 app.use(mongoSanitize());
 
@@ -38,18 +54,6 @@ app.use(async (req, res, next) => {
   try { await connectDB(); next(); }
   catch (err) { res.status(500).json({ message: 'DB connection failed' }); }
 });
-
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
-
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-}));
 app.use(express.json({ limit: '12mb' })); // allow base64 images
 
 // Routes
