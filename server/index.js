@@ -49,10 +49,13 @@ async function connectDB() {
   );
 }
 
+// Health check — before DB middleware so it always responds
+app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date(), db: mongoose.connection.readyState }));
+
 // Connect before every request (no-op if already connected)
 app.use(async (req, res, next) => {
   try { await connectDB(); next(); }
-  catch (err) { res.status(500).json({ message: 'DB connection failed' }); }
+  catch (err) { res.status(500).json({ message: 'DB connection failed — check MONGODB_URI env var' }); }
 });
 app.use(express.json({ limit: '12mb' })); // allow base64 images
 
@@ -65,8 +68,6 @@ app.use('/api/kyc',           require('./routes/kyc'));
 app.use('/api/seed',          require('./routes/seed'));
 app.use('/api/stats',         require('./routes/stats'));
 app.use('/api/users',         require('./routes/users'));
-
-app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 
 // Local dev — start server directly
 if (process.env.NODE_ENV !== 'production') {
