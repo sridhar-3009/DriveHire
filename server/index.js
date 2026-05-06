@@ -44,9 +44,9 @@ app.use('/api/auth/register', authLimiter);
 let cachedConn = null;
 async function connectDB() {
   if (cachedConn && mongoose.connection.readyState === 1) return;
-  cachedConn = await mongoose.connect(
-    process.env.MONGODB_URI || process.env.MONGODB_URL
-  );
+  const uri = process.env.MONGODB_URI || process.env.MONGODB_URL;
+  if (!uri) throw new Error('MONGODB_URI env var not set');
+  cachedConn = await mongoose.connect(uri);
 }
 
 // Health check — before DB middleware so it always responds
@@ -69,12 +69,12 @@ app.use('/api/seed',          require('./routes/seed'));
 app.use('/api/stats',         require('./routes/stats'));
 app.use('/api/users',         require('./routes/users'));
 
-// Local dev — start server directly
-if (process.env.NODE_ENV !== 'production') {
+// Local dev — start server directly (skip on Vercel)
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5001;
   connectDB()
     .then(() => app.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`)))
-    .catch(err => { console.error('DB failed:', err.message); process.exit(1); });
+    .catch(err => { console.error('DB failed:', err.message); });
 }
 
 // Vercel serverless export
