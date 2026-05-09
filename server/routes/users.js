@@ -1,48 +1,35 @@
 const router = require('express').Router();
-const User = require('../models/User');
-const Job = require('../models/Job');
+const supabase = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
+const { toSafeUser } = require('../lib/helpers');
 
-// GET /api/users/employer/:id — public employer profile
 router.get('/employer/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.params.id, role: 'employer' })
-      .select('-password -loginAttempts -lockUntil -isActive');
+    const { data: user } = await supabase.from('users').select('*').eq('id', req.params.id).eq('role', 'employer').single();
     if (!user) return res.status(404).json({ message: 'Employer not found' });
-
-    const activeJobs = await Job.countDocuments({ employerId: user._id, status: 'active' });
-    const obj = user.toSafeObject();
-    obj.activeJobs = activeJobs;
-    res.json(obj);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const { count: activeJobs } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('employer_id', req.params.id).eq('status', 'active');
+    res.json({ ...toSafeUser(user), activeJobs: activeJobs || 0 });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// GET /api/users/drivers — employer searches verified drivers
 router.get('/drivers', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'employer') return res.status(403).json({ message: 'Employers only' });
-    const { location, minExp, availability, search, kycOnly = 'true' } = req.query;
-    const filter = { role: 'driver', isActive: true };
-    if (kycOnly === 'true') filter['profile.kycStatus'] = 'verified';
-    if (location) filter['profile.location'] = { $regex: location, $options: 'i' };
-    if (minExp) filter['profile.experience'] = { $gte: Number(minExp) };
-    if (availability) filter['profile.availability'] = availability;
+    const { location, minExp, availability, kycOnly, search } = req.query;
+    let query = supabase.from('users').select('*').eq('role', 'driver').eq('is_active', true);
+    if (availability) query = query.eq('availability', availability);
+    if (kycOnly === 'true') query = query.eq('kyc_status', 'verified');
+    if (minExp) query = query.gte('experience', Number(minExp));
+    const { data: drivers, error } = await query.order('experience', { ascending: false }).limit(50);
+    if (error) throw error;
+    let out = drivers;
+    if (location) out = out.filter(d => (d.location || '').toLowerCase().includes(location.toLowerCase()));
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { 'profile.location': { $regex: search, $options: 'i' } },
-      ];
+      const s = search.toLowerCase();
+      out = out.filter(d => d.name.toLowerCase().includes(s) || (d.license_number || '').toLowerCase().includes(s));
     }
-    const drivers = await User.find(filter)
-      .select('-password -loginAttempts -lockUntil -email')
-      .sort({ 'profile.experience': -1 })
-      .limit(50);
-    res.json(drivers.map(d => d.toSafeObject()));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    res.json(out.map(toSafeUser));
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 module.exports = router;

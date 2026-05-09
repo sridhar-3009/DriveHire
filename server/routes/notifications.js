@@ -1,40 +1,28 @@
 const router = require('express').Router();
-const Notification = require('../models/Notification');
+const supabase = require('../lib/supabase');
 const authMiddleware = require('../middleware/auth');
 
-// GET /api/notifications — user's notifications
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const notes = await Notification.find({ userId: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(20);
-    res.json(notes);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+    const { data, error } = await supabase.from('notifications').select('*')
+      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(20);
+    if (error) throw error;
+    res.json(data.map(n => ({ ...n, _id: n.id, userId: n.user_id })));
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// PATCH /api/notifications/read-all — mark all read
 router.patch('/read-all', authMiddleware, async (req, res) => {
   try {
-    await Notification.updateMany({ userId: req.user._id, read: false }, { read: true });
+    await supabase.from('notifications').update({ read: true }).eq('user_id', req.user.id).eq('read', false);
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// PATCH /api/notifications/:id/read — mark one read
 router.patch('/:id/read', authMiddleware, async (req, res) => {
   try {
-    await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
-      { read: true }
-    );
+    await supabase.from('notifications').update({ read: true }).eq('id', req.params.id).eq('user_id', req.user.id);
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 module.exports = router;
